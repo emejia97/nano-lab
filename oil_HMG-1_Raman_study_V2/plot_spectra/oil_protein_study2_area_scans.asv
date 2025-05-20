@@ -1,0 +1,167 @@
+clear; clc; close all;
+
+path_S1_bare_10x = 'AS S1 bare NPA 10x/area scan bare NPA S1 10x';
+path_S1_bare_20x = 'AS S1 bare NPA 20x/area scan bare NPA S1 20x';
+
+path_S1_oil_10x = 'AS S1 NPA w oil 10x/area scan oil NPA S1 10x';
+path_S1_oil_20x = 'AS S1 NPA w oil 20x/area scan oil NPA S1 20x';
+
+path_S2_bare_10x = 'AS S2 bare NPA 10x/area scan bare NPA S2 10x';
+%path_S2_bare_20x = 'AS S2 bare NPA 20x/area scan bare NPA S2 20x';
+
+path_S2_HMB1_10x = 'AS S2 NPA w HMB-1 10x/area scan HMB1 NPA 10x';
+path_S2_HMB1_20x = 'AS S2 NPA w HMB-1 20x/area scan HMB1 NPA 20x';
+
+%paths = {path_S1_bare, path_S1_oil_10x, path_S1_oil_20x, ... 
+%         path_S2_HMB1_10x, path_S2_HMB1_20x, path_S2_HMB1_dried};
+
+paths = {path_S1_bare_20x, path_S1_oil_20x, path_S2_HMB1_20x};
+
+lambda_ex = 784.500; %nm - excitation wavelength
+
+fp = paths;
+N = length(fp);
+
+
+[wavenums, specs] = extractSpecs(fp, lambda_ex, N);
+
+%figure
+%plot(wavenums, specs.data(1,:))
+
+
+
+c1 = "#0072BD"; % 
+c2 = "#D95319"; % 
+c3 = "#EDB120"; % 
+c4 = "#7E2F8E"; %
+
+avg_spec_bare = mean(specs(1).data, 1);
+std_spec_bare = std(specs(1).data, 1);
+spec_bare_UB = avg_spec_bare + std_spec_bare;
+spec_bare_LB = avg_spec_bare - std_spec_bare;
+
+fac = 0.05;
+
+avg_spec_oil_20x = mean(specs(2).data, 1);
+avg_spec_oil_20x = avg_spec_oil_20x + fac*max(abs(avg_spec_bare));
+std_spec_oil_20x = std(specs(2).data, 1);
+spec_oil_20x_UB = avg_spec_oil_20x + std_spec_oil_20x;
+spec_oil_20x_LB = avg_spec_oil_20x - std_spec_oil_20x;
+
+avg_spec_HMB1_20x = mean(specs(3).data, 1);
+avg_spec_HMB1_20x = avg_spec_HMB1_20x + 2*fac*max(abs(avg_spec_oil_20x));
+std_spec_HMB1_20x = std(specs(3).data, 1);
+spec_HMB1_20x_UB = avg_spec_HMB1_20x + std_spec_HMB1_20x;
+spec_HMB1_20x_LB = avg_spec_HMB1_20x - std_spec_HMB1_20x;
+
+
+figure
+p1 = plot(wavenums, avg_spec_bare, 'LineWidth', 1);
+p1.Color = c1;
+
+hold on
+f1 = fill([wavenums, fliplr(wavenums)], [spec_bare_UB, fliplr(spec_bare_LB)], 'b', 'FaceAlpha', 0.2, 'EdgeColor', 'none');
+f1.FaceColor = c1;
+
+p2 = plot(wavenums, avg_spec_oil_20x, 'LineWidth', 1);
+p2.Color = c2;
+f2 = fill([wavenums, fliplr(wavenums)], [spec_oil_20x_UB, fliplr(spec_oil_20x_LB)], 'b', 'FaceAlpha', 0.2, 'EdgeColor', 'none');
+f2.FaceColor = c2;
+
+
+p3 = plot(wavenums, avg_spec_HMB1_20x, 'LineWidth', 1);
+p3.Color = c3;
+f3 = fill([wavenums, fliplr(wavenums)], [spec_HMB1_20x_UB, fliplr(spec_HMB1_20x_LB)], 'b', 'FaceAlpha', 0.2, 'EdgeColor', 'none');
+f3.FaceColor = c3;
+
+
+hold off
+
+xlim([400,1800])
+legend("Bare NPA", "", "oil NPA 20x", "", "HMB NPA 20x", "")
+xlabel("Wavenumber (rel. cm^{-1})")
+ylabel("Intensity (arb.)")
+
+
+fac = 0.5;
+
+spec_oil_sub_bare = specs(2).data - specs(1).data;
+
+avg_spec_oil_sub_bare = mean(spec_oil_sub_bare, 1);
+std_spec_oil_sub_bare = std(spec_oil_sub_bare, 1);
+spec_oil_sub_bare_UB = avg_spec_oil_sub_bare + std_spec_oil_sub_bare;
+spec_oil_sub_bare_LB = avg_spec_oil_sub_bare - std_spec_oil_sub_bare;
+
+
+spec_HMB1_sub_bare = specs(3).data - specs(1).data;
+
+avg_spec_HMB1_sub_bare = mean(spec_HMB1_sub_bare, 1);
+avg_spec_HMB1_sub_bare = avg_spec_HMB1_sub_bare + 2*fac*max(abs(avg_spec_oil_sub_bare));
+std_spec_HMB1_sub_bare = std(spec_HMB1_sub_bare, 1);
+spec_HMB1_sub_bare_UB = avg_spec_HMB1_sub_bare + std_spec_HMB1_sub_bare;
+spec_HMB1_sub_bare_LB = avg_spec_HMB1_sub_bare - std_spec_HMB1_sub_bare;
+
+
+
+figure
+p1 = plot(wavenums, avg_spec_oil_sub_bare, 'LineWidth', 1);
+p1.Color = c2;
+
+hold on
+f1 = fill([wavenums, fliplr(wavenums)], [spec_oil_sub_bare_UB, fliplr(spec_oil_sub_bare_LB)], 'b', 'FaceAlpha', 0.2, 'EdgeColor', 'none');
+f1.FaceColor = c2;
+
+
+p2 = plot(wavenums, avg_spec_HMB1_sub_bare, 'LineWidth', 1);
+p2.Color = c3;
+f2 = fill([wavenums, fliplr(wavenums)], [spec_HMB1_sub_bare_UB, fliplr(spec_HMB1_sub_bare_LB)], 'b', 'FaceAlpha', 0.2, 'EdgeColor', 'none');
+f2.FaceColor = c3;
+
+hold off
+
+xlim([400,1800])
+legend("Subbed oil NPA 20x", "", "Subbed HMB NPA 20x", "")
+xlabel("Wavenumber (rel. cm^{-1})")
+ylabel("Intensity (arb.)")
+ylim([-0.02, 0.07])
+
+%figure
+%plot(wavenums, zscore(avg_spec_HMB1_20x))
+
+X = [specs(1).data; specs(2).data; specs(3).data];
+
+X_norm = zscore(X);
+
+%{
+X1 = X_norm(1:400,:);
+X2 = X_norm(401:800,:);
+X3 = X_norm(801:1200,:);
+%}
+
+X1 = specs(1).data(:, wavenums > 400 & wavenums < 1800);
+X2 = specs(2).data(:, wavenums > 400 & wavenums < 1800);
+X3 = specs(3).data(:, wavenums > 400 & wavenums < 1800);
+
+
+
+
+figure
+avg_spec_oil_20x = mean(specs(2).data, 1);
+plot(wavenums, avg_spec_oil_20x)
+
+figure
+
+[coeff, score, latent, tsquared, explained, mu] = pca(X1);
+scatter(score(:,1), score(:,2), 25, 'filled','k');
+
+hold on
+
+[coeff, score, latent, tsquared, explained, mu] = pca(X2);
+scatter(score(:,1), score(:,2), 25, 'filled','r');
+
+[coeff, score, latent, tsquared, explained, mu] = pca(X3);
+scatter(score(:,1), score(:,2), 25, 'filled','g');
+
+hold off
+
+legend("Bare", "Oil", "HMG-1")

@@ -20,7 +20,7 @@ paths = {path_S1_bare, path_S1_oil_10x, path_S1_oil_20x, path_S2_HMB1_10x, ...
 
 lambda_ex = 784.500; %nm - excitation wavelength
 
-fp = paths(1:2);
+fp = [paths(1), paths(3)];
 N = length(fp);
 
 %specs = zeros(N,1);

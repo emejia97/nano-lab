@@ -27,6 +27,20 @@ N = length(fp);
 %plot(wavenums, specs.data(1,:))
 
 
+%% outlier removal with Isolation Forest for each area scan at each timestamp - do this one time only
+
+numTrees = 200; % Number of trees in the forest
+ContaminationFraction = 0.05;
+showPCA = false;
+nIter = 2;
+
+for i = 1:4
+    specs(i).data = removeOutliers(specs(i).data, numTrees, ContaminationFraction, nIter, showPCA);
+end
+
+Ns_specs1 = size(specs(1).data, 1);
+
+%% Plot
 
 c1 = "#0072BD"; % 
 c2 = "#D95319"; % 
@@ -93,7 +107,7 @@ ylabel("Intensity (arb.)")
 
 fac = 0.4;
 
-spec_oil_sub_bare = specs(2).data - specs(1).data;
+spec_oil_sub_bare = specs(2).data(1:Ns_specs1, :) - specs(1).data;
 
 avg_spec_oil_sub_bare = mean(spec_oil_sub_bare, 1);
 std_spec_oil_sub_bare = std(spec_oil_sub_bare, 1);
@@ -101,7 +115,7 @@ spec_oil_sub_bare_UB = avg_spec_oil_sub_bare + std_spec_oil_sub_bare;
 spec_oil_sub_bare_LB = avg_spec_oil_sub_bare - std_spec_oil_sub_bare;
 
 
-spec_HMB1_sub_bare = specs(3).data - specs(1).data;
+spec_HMB1_sub_bare = specs(3).data(1:Ns_specs1, :) - specs(1).data;
 
 avg_spec_HMB1_sub_bare = mean(spec_HMB1_sub_bare, 1);
 avg_spec_HMB1_sub_bare = avg_spec_HMB1_sub_bare + 2*fac*max(abs(avg_spec_oil_sub_bare));
@@ -110,7 +124,7 @@ spec_HMB1_sub_bare_UB = avg_spec_HMB1_sub_bare + std_spec_HMB1_sub_bare;
 spec_HMB1_sub_bare_LB = avg_spec_HMB1_sub_bare - std_spec_HMB1_sub_bare;
 
 
-spec_HMB1d_sub_bare = specs(4).data(1:400,:) - specs(1).data;
+spec_HMB1d_sub_bare = specs(4).data(1:Ns_specs1,:) - specs(1).data;
 %avg_spec_HMB1d_sub_bare = mean(specs(4).data) - mean(specs(1).data);
 
 avg_spec_HMB1d_sub_bare = mean(spec_HMB1d_sub_bare, 1);
@@ -148,25 +162,47 @@ xlabel("Wavenumber (rel. cm^{-1})")
 ylabel("Intensity (arb.)")
 ylim([-0.02, 0.09])
 
-%{
-ylim([4.05,4.55])
+%% PCA
 
-xlabel("Wavelength (μm)")
-ylabel("Refractive Index (unitless)")
-title("Refractive Index vs. Wavelength for Ge_{" + (1-x) + "}Sn_{" + x + "}")
-subtitle("Uses measured compressive strain for Sn=5%")
-legend("Strained", "", "Relaxed", "", "Relaxed Estimate", "")
+X1 = specs(1).data(:, wavenums > 400 & wavenums < 1800);
+X2 = specs(2).data(:, wavenums > 400 & wavenums < 1800);
+X3 = specs(3).data(:, wavenums > 400 & wavenums < 1800);
+X4 = specs(4).data(1:Ns_specs1, wavenums > 400 & wavenums < 1800);
 
-figure
-plot(wavenums, specs(1).data)
-hold on
-plot(wavenums, specs(2).data)
-hold off
+X = [X1; X2; X3; X4];
 
-figure
-plot(wavenums, specs(2).data - specs(1).data)
+spec1_sz = size(X1);
+spec2_sz = size(X2);
+spec3_sz = size(X3);
+spec4_sz = size(X4);
 
+% Create the group labels (cell array of strings or categorical array).
+groupLabels = [repmat("Bare", spec1_sz(1), 1);
+               repmat("Oil", spec2_sz(1), 1);
+               repmat("HMG-1", spec3_sz(1), 1);
+               repmat("HMG-1 Dry", spec4_sz(1), 1)];
 
-figure
-bar(["Bare NPA", "HMB-1"], HMB1)
-%}
+%groupLabelsCell = repelem({'Control A','Control B','Control C','Experimental'}, samplesPerGroup);
+% Convert to a categorical array (optional but often convenient):
+groupLabels = categorical(groupLabels);
+
+%----------------------------------------------------------------------
+% 2. Perform PCA
+%    - 'score' are the principal component scores (900 x 1024).
+%    - 'coeff' are the principal component loadings (1024 x 1024).
+%    - 'explained' are the variance percentages for each component, etc.
+%----------------------------------------------------------------------
+[coeff, score, latent, tsquared, explained] = pca(X);
+
+%----------------------------------------------------------------------
+% 3. Plot the first two principal components, with points colored
+%    according to their respective group labels
+%----------------------------------------------------------------------
+figure;
+gscatter(score(:,1), score(:,2), groupLabels);
+
+xlabel(sprintf('PC1 (%.1f%%)', explained(1)));
+ylabel(sprintf('PC2 (%.1f%%)', explained(2)));
+title("PCA Score Plot of 4 Spectral Groups");
+legend('Location','best');
+grid on;
