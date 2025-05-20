@@ -169,18 +169,29 @@ X2 = specs(2).data(:, wavenums > 400 & wavenums < 1800);
 X3 = specs(3).data(:, wavenums > 400 & wavenums < 1800);
 X4 = specs(4).data(1:Ns_specs1, wavenums > 400 & wavenums < 1800);
 
-X = [X1; X2; X3; X4];
+%X = [X1; X2; X3; X4];
+X = [X1; X2; X3];
+
+X1 = spec_oil_sub_bare(:, wavenums > 400 & wavenums < 1800);
+X2 = spec_HMB1_sub_bare(:, wavenums > 400 & wavenums < 1800);
+X3 = spec_HMB1d_sub_bare(:, wavenums > 400 & wavenums < 1800);
 
 spec1_sz = size(X1);
 spec2_sz = size(X2);
 spec3_sz = size(X3);
-spec4_sz = size(X4);
+%spec4_sz = size(X4);
 
 % Create the group labels (cell array of strings or categorical array).
+%{
 groupLabels = [repmat("Bare", spec1_sz(1), 1);
                repmat("Oil", spec2_sz(1), 1);
                repmat("HMG-1", spec3_sz(1), 1);
                repmat("HMG-1 Dry", spec4_sz(1), 1)];
+%}
+
+groupLabels = [repmat("Oil", spec1_sz(1), 1);
+               repmat("HMG-1", spec2_sz(1), 1);
+               repmat("HMG-1 Dry", spec3_sz(1), 1)];
 
 %groupLabelsCell = repelem({'Control A','Control B','Control C','Experimental'}, samplesPerGroup);
 % Convert to a categorical array (optional but often convenient):
@@ -203,6 +214,6 @@ gscatter(score(:,1), score(:,2), groupLabels);
 
 xlabel(sprintf('PC1 (%.1f%%)', explained(1)));
 ylabel(sprintf('PC2 (%.1f%%)', explained(2)));
-title("PCA Score Plot of 4 Spectral Groups");
+title("PCA Score Plot of 3 Spectral Groups");
 legend('Location','best');
 grid on;
