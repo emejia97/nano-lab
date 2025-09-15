@@ -1,0 +1,142 @@
+clear; clc; close all;
+
+path = "D:\research\Zhou MDE Raman Impedance Cow\WITec\R6G_concentrations\";
+path_raw = path + "bare_raman_raw\";
+path_subBG = path + "bare_raman_SubBG\";
+
+filenames_raw = ["water_scan_E1s.mat", "D102M_R6G_scan_E1s.mat", "D103M_R6G_scan_E1s.mat", "D104M_R6G_scan_E1s.mat", "D105M_R6G_scan_E1s.mat"];
+filenames_subBG = ["water_scan_E1s (CRR) (SG) (Sub BG).mat", "D102M_R6G_scan_E1s (CRR) (SG) (Sub BG).mat", "D103M_R6G_scan_E1s (CRR) (SG) (Sub BG).mat", "D104M_R6G_scan_E1s (CRR) (SG) (Sub BG).mat", "D105M_R6G_scan_E1s (CRR) (SG) (Sub BG).mat"];
+
+N = numel(filenames_raw);
+
+specs_raw(N).d = '';
+specs_subBG(N).d = '';
+
+for i = 1:N
+    data_raw = load(path_raw + filenames_raw(i));
+    f = fieldnames(data_raw);
+    s = f{1};
+    specs_raw(i).d = getfield(data_raw,s);
+    
+    data_subBG = load(path_subBG + filenames_subBG(i));
+    f = fieldnames(data_subBG);
+    s = f{1};
+    specs_subBG(i).d = getfield(data_subBG,s);
+end
+
+specs_raw = [specs_raw(:).d];
+specs_subBG = [specs_subBG(:).d];
+
+
+lambda_ex = 784.900; %nm - excitation wavelength
+lambda_det = specs_raw(1).axisscale{2,1}; %nm - detected wavelengths
+wavenums = 1e7/lambda_ex - 1e7./lambda_det; % cm^-1 - wavenumbers
+
+
+spec = specs_raw(1).data(1,:);
+
+%% Plot a single spectrum
+figure
+plot(wavenums, spec)
+
+xlabel("Wavenumber (rel. cm^{-1})")
+
+
+%% Plot the average spectrum and its standard deviation
+figure
+hold on
+
+specs = specs_subBG;
+
+c = colororder;
+c1 = c(1,:);
+
+fac=1000;
+for idx = 1:numel(specs)
+    specs_avg = mean(specs(idx).data, 1);
+    specs_avg = specs_avg + (idx-1)*fac;
+    specs_std = std(specs(idx).data, 1);
+    specs_bare_UB = specs_avg + specs_std;
+    specs_bare_LB = specs_avg - specs_std;
+    
+    p1 = plot(wavenums, specs_avg, 'LineWidth', 1);
+    p1.Color = c1;
+    
+    f1 = fill([wavenums, fliplr(wavenums)], [specs_bare_UB, fliplr(specs_bare_LB)], 'b', 'FaceAlpha', 0.2, 'EdgeColor', 'none');
+    f1.FaceColor = c1;
+end
+
+hold off
+    
+xlim([400 2000])
+xlabel("Wavenumber (rel. cm^{-1})")
+
+
+%% Plot the average of R6G intensity as a function of concentration
+
+conc = [10^-2, 10^-3, 10^-4, 10^-5];
+
+R6G_stats = calcR6GStats(wavenums, specs(2:end), N-1);
+R6G_avg = R6G_stats(:,1);
+
+model = @(a,b,c,x) a + b*x + c*x.^2;
+ft = fittype(model)
+
+[f,gof] = fit(conc)', R6G_avg, ft, 'StartPoint', [max(R6G_avg) -1 -1])
+
+%eqn_str = sprintf("y = %0.000006f*x + %0.003f", round(f.m,6), round(f.b,3));
+
+x = linspace(min(log10(conc)), max(log10(conc)), 1000);
+y = f.a + f.b*x + f.c*x.^2;
+
+figure
+errorbar(conc, R6G_avg, R6G_stats(:,4), R6G_stats(:,5))
+hold on
+hold off
+
+set(gca, 'XScale', 'log');
+%set(gca, 'XScale', 'log', 'YScale', 'log');
+xlim([8*10^-6, 2*10^-2])
+%ylim([1, 10^3])
+
+figure
+plot(x,y)
+
+
+
+
+function R6G_stats = calcR6GStats(wavenums, specs, N)
+
+    R6G_index1 = find(wavenums > 1358 & wavenums < 1362);
+    R6G_index2 = find(wavenums > 1308 & wavenums < 1312);
+    R6G_index3 = find(wavenums > 1183 & wavenums < 1187);
+    R6G_index4 = find(wavenums > 1505 & wavenums < 1509);
+
+    filter_size = 5;
+
+    R6G_index_range1 = (R6G_index1 - floor(filter_size/2)):(R6G_index1 + floor(filter_size/2));
+    R6G_index_range2 = (R6G_index2 - floor(filter_size/2)):(R6G_index2 + floor(filter_size/2));
+    R6G_index_range3 = (R6G_index3 - floor(filter_size/2)):(R6G_index3 + floor(filter_size/2));
+    R6G_index_range4 = (R6G_index4 - floor(filter_size/2)):(R6G_index4 + floor(filter_size/2));
+
+    R6G_stats = zeros([N, 7]); % R6G measurements and samples for each measurement
+
+    alpha = 0.05; % 1 - alpha = confidence level
+    
+    for i = 1:N
+        Ns = size(specs(i).data,1); % # of samples for current measurement
+    
+        % avg value within the wavenumber window
+        R1_mean = mean(specs(i).data(:,R6G_index_range1),2); %1360
+        R2_mean = mean(specs(i).data(:,R6G_index_range2),2); %1310
+        R3_mean = mean(specs(i).data(:,R6G_index_range3),2); %1183
+        R4_mean = mean(specs(i).data(:,R6G_index_range4),2); %1512
+    
+        R6G_avg_peak = mean([R1_mean, R2_mean, R3_mean, R4_mean],2);
+
+        R6G_stats(i,:) = calcStats2(R6G_avg_peak,Ns,alpha);
+    end
+
+end
+
+
