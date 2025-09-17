@@ -29,10 +29,11 @@ SA = (pi*R^2)*(1+(2*pi*r*h)/p^2); % surface area for nanopillars
 
 Ns = SA * rhos; % number of BZT molecules contributing to SERS intensity
 
-% File path definition & data loading
+%% File path definition & data loading (IMPORTANT NOTE: Constants are defined assuming 20x objective & 2mW power for SERS measurement)
 
 S3_BZT = "../EF BZT";
 
+% --- note that background subtracted & baseline corrected data is used ---
 fname_BZT = "Single Spectrum_008_Spec.Data 2 (CRR) (Sub BG).mat";
 %fname_BZT = "Single Spectrum_009_Spec.Data 2 (CRR) (Sub BG).mat";
 
